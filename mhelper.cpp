@@ -56,33 +56,55 @@ void menu() {
 
 void generateProcesses(queue<Process>& plist, int s) {
 	int totalmem = 0;
-	int finaltotal = 0;
 	int memory;
 	long int serviceTime;
 	mt19937_64 randNum(s);
 	Process temp;
+	int nlist[40];
+	bool done = false;
+	int counter = 0;
+	
+	// initialize the list
+	for(int i = 0; i < 40; i++) { 
+		nlist[i] = 0; 
+	}
+	
+	// making numbers for 10kb distributed memory
+	// loops through, adding random values 1-100 to values until totalmem > 10000
+	while(!done) {
+		uniform_int_distribution<int> randMem(1, 100);
+		memory = randMem(randNum);
+		nlist[counter] += memory;
+		totalmem += memory;
+		counter++;
+		
+		// reset counter if necessary
+		if(counter == 40) {
+			counter = 0;
+		} 
+		
+		// test for break from while (if total memory > 10k)
+		// if it went over, deduct from whatever process the counter is on
+		if(totalmem >= 10000) {
+			nlist[counter] += 10000 - totalmem;
+			done = true;
+		}
+	}
+	
+	totalmem = 0;
 	
 	for (int i = 0; i < 40; i++) {
 		uniform_int_distribution<long int> randST(10000000, 10000000000000);
 		serviceTime = randST(randNum);
 		
-		if (i == 39) { // if it's the last process, assign leftoever memory
-			memory = 10000 - totalmem;
-		} else { // or generate a random memory value to assign
-			uniform_int_distribution<int> randTime(50,400);
-			memory = randTime(randNum);
-			totalmem += memory;
-		}
-
-		finaltotal += memory;		
-		
 		// set temp process' attributes and push to queue
 		temp.st = serviceTime;
-		temp.mem = memory;
+		temp.mem = nlist[i];
 		plist.push(temp);
+		totalmem += temp.mem;
 		
 		cout << "Process " << (i + 1) << "\nST: " << temp.st << "\nMem: " << temp.mem << endl;
 	}
 	
-	cout << "total memory utilization of all processes: " << finaltotal << "\n\n";
+	cout << "total memory utilization of all processes: " << totalmem << "\n\n";
 }
