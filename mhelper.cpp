@@ -1,10 +1,8 @@
-// mhelper.cpp - functions for main project file (main.cpp)
+// mhelper.cpp: functions for main project file (main.cpp)
 
 #include "main.h"
 
 void menu() {
-	// note: option 6 & queue pl will be removed later... just for testing
-
 	int option;
 	int seeed = 0;
 	queue<Process> pl;
@@ -27,17 +25,17 @@ void menu() {
 		
 		switch(option) {
 			case 1:
-				cout << "scenario 1" << endl;
+				scenario1(seeed);
 				break;
 			case 2:
-				cout << "scenario 2" << endl;
+				scenario2(seeed);
 				break;
 			case 3:					
-				cout << "scenario 3" << endl;
+				scenario3(seeed);
 				break;
 			case 4:
-				cout << "scenario 4" << endl;
-				break;				
+				scenario4(seeed);
+				break;			
 			case 5:
 				cout << "Goodbye!" << endl;
 				break;
@@ -54,6 +52,9 @@ void menu() {
 	}
 }
 
+// generateProcesses: creates 40 processors with randomized memory requirements and service times
+// @plist: mem address of queue to assign processes to
+// @s: user selected seed for randomization
 void generateProcesses(queue<Process>& plist, int s) {
 	int totalmem = 0;
 	int memory;
@@ -100,11 +101,106 @@ void generateProcesses(queue<Process>& plist, int s) {
 		// set temp process' attributes and push to queue
 		temp.st = serviceTime;
 		temp.mem = nlist[i];
+		temp.id = i + 1;
 		plist.push(temp);
 		totalmem += temp.mem;
 		
-		cout << "Process " << (i + 1) << "\nST: " << temp.st << "\nMem: " << temp.mem << endl;
+		//cout << "Process " << temp.id << "\nST: " << temp.st << "\nMem: " << temp.mem << endl;
 	}
 	
-	cout << "total memory utilization of all processes: " << totalmem << "\n\n";
+	//cout << "total memory utilization of all processes: " << totalmem << "\n\n";
+}
+
+// procFree: used to determine if all four processors are free
+// @sys: array of processors to evaluate
+bool procFree(Processor sys[]) {
+	for(int i = 0; i < 4; i++) {
+		if(sys[i].inUse) {
+			return false;
+		}
+	}
+	return true;
+}
+
+// scenario1: uses malloc/free to allocate memory for simulation
+// @s: user selected seed for randomization
+// @see generateProcesses
+// @see procFree
+void scenario1(int s) {
+	unsigned long long int cycle = 0;
+	queue<Process> ready; // ready queue
+	queue<Process> complete; // completed processes 
+	Process temp;
+	Process ph; // placeholder process
+	Process onProc[4] = {ph, ph, ph, ph};
+	bool sysDone = false;
+	int memory = 10000;
+	long long minST = 10000000000001;
+	
+	// generate processors with given seed
+	generateProcesses(ready, s);
+	
+	// create processors
+	Processor sys[4];
+	
+	cout << "\n= Scenario One Start =" << endl;
+	
+	// main processing loop
+	while(!sysDone) {
+		// check if ready queue has anything to add
+		if(!ready.empty()) {
+			// check all four processes to see if one is available
+			for(int i = 0; i < 4; i++) {
+				if(!sys[i].inUse && ready.size() != 0) { 
+					temp = ready.front();
+					ready.pop(); // pop the next process off
+					temp.ptr = (int*) malloc(temp.mem * 1000); // allocate memory in bytes
+					onProc[i] = temp; // assign the next process to a processor
+					sys[i].inUse = true; // mark processor in use
+
+					cout << "Assigning PID " << onProc[i].id << " to processor #" << (i+1) << " (at cycle " << cycle << ")" << endl;
+					cout << "ST: " << onProc[i].st << endl;
+					cout << "Memory Location: " << onProc[i].ptr << "\n\n";
+				}
+			}
+		}
+		
+		// get minimum # of cycles til next process leaves
+		for(int i = 0; i < 4; i++) {
+			if(onProc[i].id > 0 && onProc[i].st - onProc[i].at < minST) {
+				minST = onProc[i].st - onProc[i].at;
+			}
+		}
+		
+		// add that min # of cycles to everyone's attained time
+		cycle += minST;
+		for(int i = 0; i < 4; i++) {
+			onProc[i].at += minST;
+			if(onProc[i].id > 0 && onProc[i].st == onProc[i].at) {
+				sys[i].inUse = false; // free processor
+				free(onProc[i].ptr); // free memory allocated to process
+				complete.push(onProc[i]); // process is complete!
+				cout << "PID " << onProc[i].id << " is complete.\n\n";
+				onProc[i] = ph; // set placeholder
+			}
+		}
+		minST = 10000000000001; // set min service time back to default
+		
+		// check if completed queue has reached 40 and no processors are in use
+		if(complete.size() == 40 && procFree(sys)) {
+			sysDone = true;
+		}
+	}	
+}
+
+void scenario2(int s) {
+	cout << "scenario 2" << endl;
+}
+
+void scenario3(int s) {
+	cout << "scenario 2" << endl;
+}
+
+void scenario4(int s) {
+	cout << "scenario 2" << endl;
 }
