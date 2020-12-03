@@ -2,6 +2,17 @@
 
 #include "main.h"
 
+queue<int> waiting; 		//smaller then memory but no space available
+queue<int> rejected; 		//larger then memory
+int inprogress[4];			//stores the process with index of tuple 
+int processinprogress[8];	//stores tuples of start and end spots from malloc
+int memory[10000];			//size of memory
+
+void fillMemory();
+void my_malloc(int m, int sysi);
+void my_free(int x);
+void checkIndex(int* x, int* y);
+
 void menu() {
 	int option;
 	int seeed = 0;
@@ -156,6 +167,7 @@ void scenario1(int s) {
 			// check all four processes to see if one is available
 			for(int i = 0; i < 4; i++) {
 				if(!sys[i].inUse && ready.size() != 0) { 
+					//first element process in ready queue
 					temp = ready.front();
 					ready.pop(); // pop the next process off
 					temp.ptr = (int*) malloc(temp.mem * 1000); // allocate memory in bytes
@@ -197,9 +209,85 @@ void scenario1(int s) {
 	}
 	//time in nanoseconds displayed
 	cout<< "It took "<< time <<" ns to complete.";
+}
 
 void scenario2(int s) {
-	cout << "scenario 2" << endl;
+	unsigned long long int cycle = 0;
+	queue<Process> ready; // ready queue
+	queue<Process> complete; // completed processes 
+	Process temp;
+	Process ph; // placeholder process
+	Process onProc[4] = {ph, ph, ph, ph};
+	bool sysDone = false;
+	int memory = 10000;
+	long long minST = 10000000000001;
+	
+	// generate processors with given seed
+	generateProcesses(ready, s);
+	
+	// create processors
+	Processor sys[4];
+	
+	cout << "\n= Scenario One Start =" << endl;
+	
+	//start timer 
+	clock_t timer = clock();
+	int time;
+	// main processing loop
+	while(!sysDone) {
+		time = (clock()-timer)/double(CLOCKS_PER_SEC)*1000000000;
+		// check if ready queue has anything to add
+		if(!ready.empty()) {
+			// check all four processes to see if one is available
+			for(int i = 0; i < 4; i++) {
+				if(!sys[i].inUse && ready.size() != 0) { 
+					//first element process in ready queue
+					temp = ready.front();
+					ready.pop(); // pop the next process off
+					//ptr to first element in ready queue
+					//mem = memory size of process
+					//allocating space on heap to store an int
+					temp.ptr = (int*)my_malloc(temp.mem, sys[i]); // allocate memory in bytes
+					onProc[i] = temp; // assign the next process to a processor
+					sys[i].inUse = true; // mark processor in use
+
+					cout << "Assigning PID " << onProc[i].id << " to processor #" << (i+1) << " (at cycle " << cycle << ")" << endl;
+					cout << "ST: " << onProc[i].st << endl;
+					cout << "Memory Location: " << onProc[i].ptr << "\n\n";
+				}
+			}
+		}
+		
+		// get minimum # of cycles til next process leaves
+		for(int i = 0; i < 4; i++) {
+			if(onProc[i].id > 0 && onProc[i].st - onProc[i].at < minST) {
+				minST = onProc[i].st - onProc[i].at;
+			}
+		}
+		
+		// add that min # of cycles to everyone's attained time
+		cycle += minST;
+		for(int i = 0; i < 4; i++) {
+			//process id set to min# of cycles for preemption
+			onProc[i].at += minST;
+			//if all service time is gone
+			if(onProc[i].id > 0 && onProc[i].st == onProc[i].at) {
+				sys[i].inUse = false; // free processor
+				my_free(onProc[i].ptr); // free memory allocated to process
+				complete.push(onProc[i]); // process is complete!
+				cout << "PID " << onProc[i].id << " is complete.\n\n";
+				onProc[i] = ph; // set placeholder
+			}
+		}
+		minST = 10000000000001; // set min service time back to default
+		
+		// check if completed queue has reached 40 and no processors are in use
+		if(complete.size() == 40 && procFree(sys)) {
+			sysDone = true;
+		}
+	}
+	//time in nanoseconds displayed
+	cout<< "It took "<< time <<" ns to complete.";
 }
 
 void scenario3(int s) {
@@ -208,4 +296,124 @@ void scenario3(int s) {
 
 void scenario4(int s) {
 	cout << "scenario 2" << endl;
+}
+
+void my_malloc(int m, int sysi)
+{
+	if (m < 10000)
+	{//if the process is small enough to fit into memory
+		int start = 0;	//keep track of first available spot
+		int end = 0;	//keep track of last available spot
+		int tracker = 0;//track end of memory
+		bool finish = false;
+		while (!finish)
+		{//check if there is space
+			for (int i = tracker; i < 10000; i++)
+			{	
+				if (memory[i] == 0)
+				{//finds index of first available spot
+					start = i;
+					for (int j = i; j < 10000; j++)
+					{//find last available contingent spot
+						if (memory[j] != 0)
+						{
+							end = j-1;
+							break;
+						}
+						if (j == 9)//end of memory
+						{
+							end = j;
+							tracker = 10000;//break out of while loop
+							finish = true;
+						}
+					}
+					break;
+				}
+			}
+			if ((end - start)+1 < m)
+			{//checks if process has enough space in the current hole found
+				tracker = end + 1;
+			}
+			else
+			{
+				finish = true;
+			}
+		}
+		cout<<"start "<<start<<" end "<<end<<endl;
+		if ((end - start)+1 >= m && (end - start)+1 >= 0)
+		{//checks if spot is available and allocates to memory
+			for(int i = start; i <= start + m - 1; i++)
+			{
+				memory[i] = 1;
+			}
+		}
+		else
+		{//if spot not available add to waiting queue
+			waiting.push(m);
+		}
+		//store the process with the base and limit
+		end = start + m - 1;
+		
+		int x = sysi;
+		int y = 0;
+		//returns postion of start and end of process related to processor holding it
+		checkIndex(&x,&y);
+		inprogress[sysi] = 1;
+		processinprogress[x] = start;
+		processinprogress[y] = end;
+	}
+	else
+	{//if memory of process is bigger than the size add to queue
+		rejected.push(m);
+	}
+}
+
+//requires process and processor
+void my_free(int p)
+{//bring over process and tuple to free
+	int x = p;
+	int y = 0;
+	checkIndex(&x,&y);
+	inprogress[p] = 0;	//turns to 0 to show available
+	int start = processinprogress[x];
+	int end = processinprogress[y];
+	processinprogress[x] = 0;
+	processinprogress[y] = 0;
+	for(int i = start; i <= end; i++)
+	{
+		memory[i] = 0;
+	} 
+}
+
+void fillMemory()
+{
+	for (int i = 0; i < 10000; i++)
+	{
+		memory[i] = 0;
+	}
+}
+
+void checkIndex(int* x, int* y)
+{
+	int i = *x;
+	if (i == 0)
+	{
+		*x = 0;
+		*y = 1; 
+	}
+	else if (i == 1)
+	{
+		*x = 2;
+		*y = 3; 
+	}
+	else if (i == 2)
+	{
+		*x = 4;
+		*y = 5; 
+	}
+	else if (i == 3)
+	{
+		*x = 6;
+		*y = 7; 
+	}
 }
