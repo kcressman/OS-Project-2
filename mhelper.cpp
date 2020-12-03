@@ -58,7 +58,7 @@ void menu() {
 				// for invalid characters, options, etc: clear the input stream
 				cin.clear();
 				cin.ignore(numeric_limits<streamsize>::max(), '\n');
-				cout << "Please choose a valid option.\n\n" << endl;
+				cout << "\nPlease choose a valid option.\n\n" << endl;
 				break;
 			}
 	}
@@ -320,13 +320,11 @@ int my_malloc(int m, int sysi)
 						if (memory[j] != 0)
 						{
 							end = j-1;
-							temp = j-1;
 							break;
 						}
-						if (j == 9)//end of memory
+						if (j == 9999)//end of memory
 						{
 							end = j;
-							temp = j;
 							tracker = 10000;//break out of while loop
 							finish = true;
 						}
@@ -356,7 +354,7 @@ int my_malloc(int m, int sysi)
 		}
 		//store the process with the base and limit
 		end = start + m - 1;
-		
+		temp = end;
 		int x = sysi;
 		int y = 0;
 		//returns postion of start and end of process related to processor holding it
