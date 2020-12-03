@@ -9,7 +9,7 @@ int processinprogress[8];	//stores tuples of start and end spots from malloc
 int memory[10000];			//size of memory
 
 void fillMemory();
-void my_malloc(int m, int sysi);
+int my_malloc(int m, int sysi);
 void my_free(int x);
 void checkIndex(int* x, int* y);
 
@@ -39,6 +39,7 @@ void menu() {
 				scenario1(seeed);
 				break;
 			case 2:
+				fillMemory();
 				scenario2(seeed);
 				break;
 			case 3:					
@@ -228,7 +229,7 @@ void scenario2(int s) {
 	// create processors
 	Processor sys[4];
 	
-	cout << "\n= Scenario One Start =" << endl;
+	cout << "\n= Scenario Two Start =" << endl;
 	
 	//start timer 
 	clock_t timer = clock();
@@ -247,13 +248,13 @@ void scenario2(int s) {
 					//ptr to first element in ready queue
 					//mem = memory size of process
 					//allocating space on heap to store an int
-					temp.ptr = (int*)my_malloc(temp.mem, sys[i]); // allocate memory in bytes
+					temp.ptr2 = my_malloc(temp.mem, i); // allocate memory in bytes
 					onProc[i] = temp; // assign the next process to a processor
 					sys[i].inUse = true; // mark processor in use
 
 					cout << "Assigning PID " << onProc[i].id << " to processor #" << (i+1) << " (at cycle " << cycle << ")" << endl;
 					cout << "ST: " << onProc[i].st << endl;
-					cout << "Memory Location: " << onProc[i].ptr << "\n\n";
+					cout << "Memory Location: " << onProc[i].ptr2 << "\n\n";
 				}
 			}
 		}
@@ -273,7 +274,7 @@ void scenario2(int s) {
 			//if all service time is gone
 			if(onProc[i].id > 0 && onProc[i].st == onProc[i].at) {
 				sys[i].inUse = false; // free processor
-				my_free(onProc[i].ptr); // free memory allocated to process
+				my_free(onProc[i].ptr2); // free memory allocated to process
 				complete.push(onProc[i]); // process is complete!
 				cout << "PID " << onProc[i].id << " is complete.\n\n";
 				onProc[i] = ph; // set placeholder
@@ -298,8 +299,9 @@ void scenario4(int s) {
 	cout << "scenario 2" << endl;
 }
 
-void my_malloc(int m, int sysi)
+int my_malloc(int m, int sysi)
 {
+	int temp;
 	if (m < 10000)
 	{//if the process is small enough to fit into memory
 		int start = 0;	//keep track of first available spot
@@ -318,11 +320,13 @@ void my_malloc(int m, int sysi)
 						if (memory[j] != 0)
 						{
 							end = j-1;
+							temp = j-1;
 							break;
 						}
 						if (j == 9)//end of memory
 						{
 							end = j;
+							temp = j;
 							tracker = 10000;//break out of while loop
 							finish = true;
 						}
@@ -339,7 +343,6 @@ void my_malloc(int m, int sysi)
 				finish = true;
 			}
 		}
-		cout<<"start "<<start<<" end "<<end<<endl;
 		if ((end - start)+1 >= m && (end - start)+1 >= 0)
 		{//checks if spot is available and allocates to memory
 			for(int i = start; i <= start + m - 1; i++)
@@ -366,6 +369,7 @@ void my_malloc(int m, int sysi)
 	{//if memory of process is bigger than the size add to queue
 		rejected.push(m);
 	}
+	return temp;
 }
 
 //requires process and processor

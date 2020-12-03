@@ -23,6 +23,7 @@ struct Process
 	int mem; 
 	long long at = 0; // attained time
 	int* ptr; // for malloc/free in scenario1
+	int ptr2; //for my_malloc/my_free in scenario2
 	int loc = -1; 
 	// @loc: (for my_malloc/my_free) location in 10mb memory block where process enters
 	// if -1, process wasn't allocated
@@ -36,6 +37,6 @@ void scenario2(int s);
 void scenario3(int s);
 void scenario4(int s);
 void fillMemory();
-void my_malloc(int m, int sysi);
+int my_malloc(int m, int sysi);
 void my_free(int x);
 void checkIndex(int* x, int* y);
