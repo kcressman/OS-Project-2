@@ -23,28 +23,37 @@ void menu() {
 
 	cout << "\n========\nWelcome!\n========\n";
 
-	while(option != 3) {
+	while(option != 5) {
 		cout << "Please select an option:" << endl;
-		cout << "1. Use malloc/free" << endl;
-		cout << "2. Use my_malloc/my_free" << endl;
-		cout << "3. Quit" << endl;
-		cout << "> ";
-		//cout << "4. Test random process generator" << endl;
-
+		cout << "1. Scenario 1" << endl;
+		cout << "2. Scenario 2" << endl;
+		cout << "3. Scenario 3" << endl;
+		cout << "4. Scenario 4" << endl;
+		cout << "5. Quit" << endl;
+		cout << "6. Test random process generator" << endl;
+		
 		cin >> option;
-
+		
 		switch(option) {
 			case 1:
 				scenario1(seeed);
 				break;
 			case 2:
-				fillMemory();
-				scenario234(seeed);
+				fillMemory(limit2);
+				scenario2(seeed);
 				break;
-			case 3:
-				cout << "Goodbye!" << endl;
+			case 3:	
+				fillMemory(limit3);				
+				scenario3(seeed);
 				break;
 			case 4:
+				fillMemory(limit4);
+				scenario4(seeed);
+				break;			
+			case 5:
+				cout << "Goodbye!" << endl;
+				break;
+			case 6:
 				generateProcesses(pl, seeed);
 				break;
 			default:
@@ -215,7 +224,102 @@ void scenario1(int s) {
 // @see my_free
 // @see generateProcesses
 // @see procFree
-void scenario234(int s) {
+void scenario2(int s) {
+	unsigned long long int cycle = 0;
+	queue<Process> ready; // ready queue
+	queue<Process> complete; // completed processes
+	Process temp;
+	Process ph; // placeholder process
+	Process onProc[4] = {ph, ph, ph, ph};
+	bool sysDone = false;
+	long long minST = 10000000000001;
+
+	// generate processors with given seed
+	generateProcesses(ready, s);
+
+	// create processors
+	Processor sys[4];
+
+	cout << "\n= Scenario Two Start =" << endl;
+
+	//start timer
+	clock_t timer = clock();
+	int time;
+	// main processing loop
+	while(!sysDone) {
+		time = (clock()-timer)/double(CLOCKS_PER_SEC)*1000000000;
+		// check if ready queue has anything to add
+		if(!ready.empty()) {
+			// check all four processes to see if one is available
+			for(int i = 0; i < 4; i++) {
+				if(!sys[i].inUse && ready.size() != 0) {
+					//first element process in ready queue
+					temp = ready.front();
+					ready.pop(); // pop the next process off
+					//ptr to first element in ready queue
+					//mem = memory size of process
+					//allocating space on heap to store an int
+					temp.ptr2 = my_malloc(temp, i); // allocate memory in bytes
+					onProc[i] = temp; // assign the next process to a processor
+					sys[i].inUse = true; // mark processor in use
+
+					cout << "Assigning PID " << onProc[i].id << " to processor #" << (i+1) << " (at cycle " << cycle << ")" << endl;
+					//cout << "ST: " << onProc[i].st << endl;
+					cout << "Memory Location: " << onProc[i].ptr2 << endl;
+					cout << "Mem Requirements: " << onProc[i].mem << "\n\n";
+				}
+			}
+		}
+
+		// get minimum # of cycles til next process leaves
+		for(int i = 0; i < 4; i++) {
+			if(onProc[i].id > 0 && onProc[i].st - onProc[i].at < minST) {
+				minST = onProc[i].st - onProc[i].at;
+			}
+		}
+
+		// add that min # of cycles to everyone's attained time
+		cycle += minST;
+		for(int i = 0; i < 4; i++) {
+			//process id set to min# of cycles for preemption
+			onProc[i].at += minST;
+			//if all service time is gone
+			if(onProc[i].id > 0 && onProc[i].st == onProc[i].at) {
+				sys[i].inUse = false; // free processor
+				my_free(onProc[i].ptr2); // free memory allocated to process
+				complete.push(onProc[i]); // process is complete!
+				cout << "PID " << onProc[i].id << " is complete.\n\n";
+				onProc[i] = ph; // set placeholder
+
+				// a process left the system... time to check to see if a process is waiting
+				if(!waiting.empty() && waiting.front().id != 0) {
+					temp = waiting.front();
+					ready.push(temp);
+					waiting.pop();
+					//cout << "added PID " << temp.id << " back to ready\n\n";
+				}
+			}
+		}
+
+		if(ready.empty() && procFree(sys) && !waiting.empty()) {
+			temp = waiting.front();
+			ready.push(temp);
+			waiting.pop();
+			//cout << "added PID " << temp.id << " back to ready\n\n";
+		}
+
+		minST = 10000000000001; // set min service time back to default
+
+		// check if completed queue has reached 40 and no processors are in use
+		if((ready.size() + waiting.size() < 1) && procFree(sys)) {
+			sysDone = true;
+		}
+	}
+	//time in nanoseconds displayed
+	cout << "It took " << time << " ns to complete.\n\n";
+}
+
+void scenario3(int s) {
 	unsigned long long int cycle = 0;
 	queue<Process> ready; // ready queue
 	queue<Process> complete; // completed processes
@@ -232,6 +336,101 @@ void scenario234(int s) {
 	Processor sys[4];
 
 	cout << "\n= Scenario Three Start =" << endl;
+
+	//start timer
+	clock_t timer = clock();
+	int time;
+	// main processing loop
+	while(!sysDone) {
+		time = (clock()-timer)/double(CLOCKS_PER_SEC)*1000000000;
+		// check if ready queue has anything to add
+		if(!ready.empty()) {
+			// check all four processes to see if one is available
+			for(int i = 0; i < 4; i++) {
+				if(!sys[i].inUse && ready.size() != 0) {
+					//first element process in ready queue
+					temp = ready.front();
+					ready.pop(); // pop the next process off
+					//ptr to first element in ready queue
+					//mem = memory size of process
+					//allocating space on heap to store an int
+					temp.ptr2 = my_malloc(temp, i); // allocate memory in bytes
+					onProc[i] = temp; // assign the next process to a processor
+					sys[i].inUse = true; // mark processor in use
+
+					cout << "Assigning PID " << onProc[i].id << " to processor #" << (i+1) << " (at cycle " << cycle << ")" << endl;
+					//cout << "ST: " << onProc[i].st << endl;
+					cout << "Memory Location: " << onProc[i].ptr2 << endl;
+					cout << "Mem Requirements: " << onProc[i].mem << "\n\n";
+				}
+			}
+		}
+
+		// get minimum # of cycles til next process leaves
+		for(int i = 0; i < 4; i++) {
+			if(onProc[i].id > 0 && onProc[i].st - onProc[i].at < minST) {
+				minST = onProc[i].st - onProc[i].at;
+			}
+		}
+
+		// add that min # of cycles to everyone's attained time
+		cycle += minST;
+		for(int i = 0; i < 4; i++) {
+			//process id set to min# of cycles for preemption
+			onProc[i].at += minST;
+			//if all service time is gone
+			if(onProc[i].id > 0 && onProc[i].st == onProc[i].at) {
+				sys[i].inUse = false; // free processor
+				my_free(onProc[i].ptr2); // free memory allocated to process
+				complete.push(onProc[i]); // process is complete!
+				cout << "PID " << onProc[i].id << " is complete.\n\n";
+				onProc[i] = ph; // set placeholder
+
+				// a process left the system... time to check to see if a process is waiting
+				if(!waiting.empty() && waiting.front().id != 0) {
+					temp = waiting.front();
+					ready.push(temp);
+					waiting.pop();
+					//cout << "added PID " << temp.id << " back to ready\n\n";
+				}
+			}
+		}
+
+		if(ready.empty() && procFree(sys) && !waiting.empty()) {
+			temp = waiting.front();
+			ready.push(temp);
+			waiting.pop();
+			//cout << "added PID " << temp.id << " back to ready\n\n";
+		}
+
+		minST = 10000000000001; // set min service time back to default
+
+		// check if completed queue has reached 40 and no processors are in use
+		if((ready.size() + waiting.size() < 1) && procFree(sys)) {
+			sysDone = true;
+		}
+	}
+	//time in nanoseconds displayed
+	cout << "It took " << time << " ns to complete.\n\n";
+}
+
+void scenario4(int s) {
+	unsigned long long int cycle = 0;
+	queue<Process> ready; // ready queue
+	queue<Process> complete; // completed processes
+	Process temp;
+	Process ph; // placeholder process
+	Process onProc[4] = {ph, ph, ph, ph};
+	bool sysDone = false;
+	long long minST = 10000000000001;
+
+	// generate processors with given seed
+	generateProcesses(ready, s);
+
+	// create processors
+	Processor sys[4];
+
+	cout << "\n= Scenario Four Start =" << endl;
 
 	//start timer
 	clock_t timer = clock();
