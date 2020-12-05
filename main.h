@@ -33,9 +33,7 @@ struct Process
 void menu();
 void generateProcesses(queue<Process>&, int);
 void scenario1(int);
-void scenario2(int);
-void scenario3(int);
-void scenario4(int);
+void scenario234(int);
 void fillMemory();
 int my_malloc(Process, int);
 void my_free(int);

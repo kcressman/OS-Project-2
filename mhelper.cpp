@@ -6,9 +6,13 @@ queue<Process> waiting; 		//smaller then memory but no space available
 queue<Process> rejected; 		//larger then memory
 int inprogress[4];			//stores the process with index of tuple
 int processinprogress[8];	//stores tuples of start and end spots from malloc
-int memory[1000];			//size of memory
+
+// ===========EDIT SYSTEM MEMORY SIZE HERE==============
+int memory[1000];
 int memsize = 1000;
 
+// @menu: displays opening menu after prompting user for seed value
+// @see fillMemory
 void menu() {
 	int option;
 	int seeed = 0;
@@ -19,14 +23,13 @@ void menu() {
 
 	cout << "\n========\nWelcome!\n========\n";
 
-	while(option != 5) {
+	while(option != 3) {
 		cout << "Please select an option:" << endl;
-		cout << "1. Scenario 1" << endl;
-		cout << "2. Scenario 2" << endl;
-		cout << "3. Scenario 3" << endl;
-		cout << "4. Scenario 4" << endl;
-		cout << "5. Quit" << endl;
-		cout << "6. Test random process generator" << endl;
+		cout << "1. Use malloc/free" << endl;
+		cout << "2. Use my_malloc/my_free" << endl;
+		cout << "3. Quit" << endl;
+		cout << "> ";
+		//cout << "4. Test random process generator" << endl;
 
 		cin >> option;
 
@@ -36,20 +39,12 @@ void menu() {
 				break;
 			case 2:
 				fillMemory();
-				scenario2(seeed);
+				scenario234(seeed);
 				break;
 			case 3:
-				fillMemory();
-				scenario3(seeed);
-				break;
-			case 4:
-				fillMemory();
-				scenario4(seeed);
-				break;
-			case 5:
 				cout << "Goodbye!" << endl;
 				break;
-			case 6:
+			case 4:
 				generateProcesses(pl, seeed);
 				break;
 			default:
@@ -67,6 +62,7 @@ void menu() {
 // @s: user selected seed for randomization
 void generateProcesses(queue<Process>& plist, int s) {
 	int totalmem = 0;
+	unsigned long long int totst = 0;
 	int memory;
 	long int serviceTime;
 	mt19937_64 randNum(s);
@@ -110,6 +106,7 @@ void generateProcesses(queue<Process>& plist, int s) {
 
 		// set temp process' attributes and push to queue
 		temp.st = serviceTime;
+		totst += serviceTime;
 		temp.mem = nlist[i];
 		temp.id = i + 1;
 		plist.push(temp);
@@ -118,11 +115,13 @@ void generateProcesses(queue<Process>& plist, int s) {
 		//cout << "Process " << temp.id << "\nST: " << temp.st << "\nMem: " << temp.mem << endl;
 	}
 
-	//cout << "total memory utilization of all processes: " << totalmem << "\n\n";
+	//cout << "total memory utilization of all processes: " << totalmem << "\n";
+	//cout << "average service time: " << totst / 40 << "\n\n";
 }
 
 // procFree: used to determine if all four processors are free
-// @sys: array of processors to evaluate
+// @param sys array of processors to evaluate
+// @return boolean; true if a processor is in use, false if none are in use
 bool procFree(Processor sys[]) {
 	for(int i = 0; i < 4; i++) {
 		if(sys[i].inUse) {
@@ -133,7 +132,7 @@ bool procFree(Processor sys[]) {
 }
 
 // scenario1: uses malloc/free to allocate memory for simulation
-// @s: user selected seed for randomization
+// @param s user selected seed for randomization
 // @see generateProcesses
 // @see procFree
 void scenario1(int s) {
@@ -157,6 +156,7 @@ void scenario1(int s) {
 	//start timer
 	clock_t timer = clock();
 	int time;
+
 	// main processing loop
 	while(!sysDone) {
 		time = (clock()-timer)/double(CLOCKS_PER_SEC)*1000000000;
@@ -209,86 +209,13 @@ void scenario1(int s) {
 	cout<< "It took "<< time <<" ns to complete.\n\n";
 }
 
-void scenario2(int s) {
-	unsigned long long int cycle = 0;
-	queue<Process> ready; // ready queue
-	queue<Process> complete; // completed processes
-	Process temp;
-	Process ph; // placeholder process
-	Process onProc[4] = {ph, ph, ph, ph};
-	bool sysDone = false;
-	int memory = 10000;
-	long long minST = 10000000000001;
-
-	// generate processors with given seed
-	generateProcesses(ready, s);
-
-	// create processors
-	Processor sys[4];
-
-	cout << "\n= Scenario Two Start =" << endl;
-
-	//start timer
-	clock_t timer = clock();
-	int time;
-	// main processing loop
-	while(!sysDone) {
-		time = (clock()-timer)/double(CLOCKS_PER_SEC)*1000000000;
-		// check if ready queue has anything to add
-		if(!ready.empty()) {
-			// check all four processes to see if one is available
-			for(int i = 0; i < 4; i++) {
-				if(!sys[i].inUse && ready.size() != 0) {
-					//first element process in ready queue
-					temp = ready.front();
-					ready.pop(); // pop the next process off
-					//ptr to first element in ready queue
-					//mem = memory size of process
-					//allocating space on heap to store an int
-					temp.ptr2 = my_malloc(temp, i); // allocate memory in bytes
-					onProc[i] = temp; // assign the next process to a processor
-					sys[i].inUse = true; // mark processor in use
-
-					cout << "Assigning PID " << onProc[i].id << " to processor #" << (i+1) << " (at cycle " << cycle << ")" << endl;
-					cout << "ST: " << onProc[i].st << endl;
-					cout << "Memory Location: " << onProc[i].ptr2 << "\n\n";
-				}
-			}
-		}
-
-		// get minimum # of cycles til next process leaves
-		for(int i = 0; i < 4; i++) {
-			if(onProc[i].id > 0 && onProc[i].st - onProc[i].at < minST) {
-				minST = onProc[i].st - onProc[i].at;
-			}
-		}
-
-		// add that min # of cycles to everyone's attained time
-		cycle += minST;
-		for(int i = 0; i < 4; i++) {
-			//process id set to min# of cycles for preemption
-			onProc[i].at += minST;
-			//if all service time is gone
-			if(onProc[i].id > 0 && onProc[i].st == onProc[i].at) {
-				sys[i].inUse = false; // free processor
-				my_free(onProc[i].ptr2); // free memory allocated to process
-				complete.push(onProc[i]); // process is complete!
-				cout << "PID " << onProc[i].id << " is complete.\n\n";
-				onProc[i] = ph; // set placeholder
-			}
-		}
-		minST = 10000000000001; // set min service time back to default
-
-		// check if completed queue has reached 40 and no processors are in use
-		if(complete.size() == 40 && procFree(sys)) {
-			sysDone = true;
-		}
-	}
-	//time in nanoseconds displayed
-	cout<< "It took "<< time <<" ns to complete.\n\n";
-}
-
-void scenario3(int s) {
+// Scenario 234: uses my_malloc/my_free to allocate memory for simulation
+// @param s user selected seed for randomization
+// @see my_malloc
+// @see my_free
+// @see generateProcesses
+// @see procFree
+void scenario234(int s) {
 	unsigned long long int cycle = 0;
 	queue<Process> ready; // ready queue
 	queue<Process> complete; // completed processes
@@ -356,27 +283,31 @@ void scenario3(int s) {
 				onProc[i] = ph; // set placeholder
 
 				// a process left the system... time to check to see if a process is waiting
-				if(waiting.front().mem <= complete.front().mem && waiting.front().id != 0) {
+				if(!waiting.empty() && waiting.front().id != 0) {
 					temp = waiting.front();
 					ready.push(temp);
 					waiting.pop();
-					cout << "add PID " << temp.id << " back to ready\n\n";
+					//cout << "added PID " << temp.id << " back to ready\n\n";
 				}
 			}
 		}
+
+		if(ready.empty() && procFree(sys) && !waiting.empty()) {
+			temp = waiting.front();
+			ready.push(temp);
+			waiting.pop();
+			//cout << "added PID " << temp.id << " back to ready\n\n";
+		}
+
 		minST = 10000000000001; // set min service time back to default
 
 		// check if completed queue has reached 40 and no processors are in use
-		if((ready.size() + waiting.size() > 1) && procFree(sys)) {
+		if((ready.size() + waiting.size() < 1) && procFree(sys)) {
 			sysDone = true;
 		}
 	}
 	//time in nanoseconds displayed
-	cout<< "It took "<< time <<" ns to complete.\n\n";
-}
-
-void scenario4(int s) {
-	cout << "scenario 2" << endl;
+	cout << "It took " << time << " ns to complete.\n\n";
 }
 
 int my_malloc(Process m, int sysi)
@@ -429,34 +360,37 @@ int my_malloc(Process m, int sysi)
 			}
 		}
 		else
-		{//if spot not available add to waiting queue
+		{ // if spot not available add to waiting queue
 			waiting.push(m);
+			cout << "Sent PID " << m.id << " to waiting queue.\n\n";
 		}
 		//store the process with the base and limit
 		end = start + m.mem - 1;
 		temp = end;
 		int x = sysi;
 		int y = 0;
-		//returns postion of start and end of process related to processor holding it
 		checkIndex(&x,&y);
 		inprogress[sysi] = 1;
 		processinprogress[x] = start;
 		processinprogress[y] = end;
 	}
 	else
-	{//if memory of process is bigger than the size add to queue
+	{// mem requirement is too large! add to rejected queue
 		rejected.push(m);
+		cout << "Sent PID " << m.id << " to rejected queue.\n\n";
 	}
 	return temp;
 }
 
-//requires process and processor
+// @my_free: when a process terminates, this function frees memory from a
+// terminated process by setting the corresponding indices to 0
+// @param p index on the memory array denoting location of process to free
 void my_free(int p)
 {//bring over process and tuple to free
 	int x = p;
 	int y = 0;
 	checkIndex(&x,&y);
-	inprogress[p] = 0;	//turns to 0 to show available
+	inprogress[p] = 0;
 	int start = processinprogress[x];
 	int end = processinprogress[y];
 	processinprogress[x] = 0;
@@ -467,15 +401,18 @@ void my_free(int p)
 	}
 }
 
+// @fillMemory: initializes the array representing memory to all 0s
 void fillMemory()
 {
 	for (int i = 0; i < memsize; i++)
 	{
-		cout << i << endl;
+		//cout << i << endl;
 		memory[i] = 0;
 	}
 }
 
+// @checkIndex: returns postion of start and end of process related
+// to processor holding it
 void checkIndex(int* x, int* y)
 {
 	int i = *x;
