@@ -39,15 +39,15 @@ void menu() {
 				scenario1(seeed);
 				break;
 			case 2:
-				fillMemory(limit2);
+				fillMemory();
 				scenario2(seeed);
 				break;
 			case 3:	
-				fillMemory(limit3);				
+				fillMemory();				
 				scenario3(seeed);
 				break;
 			case 4:
-				fillMemory(limit4);
+				fillMemory();
 				scenario4(seeed);
 				break;			
 			case 5:
